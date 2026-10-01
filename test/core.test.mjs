@@ -31,3 +31,41 @@ test("classe un dossier sourcé", async () => { const provider = createFakeProvi
     "origine": "donnée synthétique"
   }
 }, provider); assert.equal(result.decision, "needs_support"); assert.equal(result.review, false); });
+
+const dossierÀRevoir = {
+  "id": "revue-1",
+  "text": "La fibre est annoncée à proximité, mais ni le cheminement intérieur ni l’accord du propriétaire ne sont documentés.",
+  "source": {
+    "url": "https://example.test/dossier-ambigu",
+    "date": "2026-09-20"
+  },
+  "details": {
+    "origine": "donnée synthétique",
+    "signal": "informations incomplètes"
+  }
+};
+
+test("marque une décision incertaine pour revue humaine", async () => {
+  const provider = createFakeProvider(() => ({
+    model: "jev-1.13.0",
+    answers: {
+      decision: {
+        type: "choice",
+        choice: "needs_support",
+        probabilities: {
+          ready: 0.15,
+          needs_support: 0.55,
+          blocked: 0.15,
+          not_applicable: 0.15,
+        },
+        confidence: 0.62,
+      },
+    },
+    usage: { input_tokens: 10, output_tokens: 0 },
+  }));
+  const résultat = await assessCopperMigration(dossierÀRevoir, provider);
+  assert.equal(résultat.decision, "needs_support");
+  assert.equal(résultat.review, true);
+  assert.equal(résultat.confidence, 0.62);
+  assert.equal(provider.calls, 1);
+});
